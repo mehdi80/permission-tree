@@ -1,0 +1,21 @@
+.permission-tree,
+.permission-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.permission-children {
+  margin-inline-start: 1.5rem;
+}
+
+.permission-row {
+  padding: 0.25rem 0;
+}
+
+.permission-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}

@@ -1,1 +1,13 @@
-<p>permission-tree works!</p>
+<ul class="permission-tree">
+  @for (node of nodes();
+    track node.id) {
+    <li>
+      <app-permission-tree-node
+        [node]="node"
+        (selectionChange)="
+          selectionChange.emit($event)
+        "
+      />
+    </li>
+  }
+</ul>

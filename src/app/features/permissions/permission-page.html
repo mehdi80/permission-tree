@@ -1,1 +1,53 @@
-<p>permission-page works!</p>
+<main class="permissions-page">
+  <h1>
+    Permission Management
+  </h1>
+
+  <div class="search">
+    <label for="permission-search">
+      Search permissions
+    </label>
+
+    <input
+      id="permission-search"
+      type="search"
+      autocomplete="off"
+      [value]="searchTerm()"
+      (input)="onSearchInput($event) "
+    />
+  </div>
+
+  @if (isSearching()) {
+    <p>
+      Searching...
+    </p>
+  }
+
+  @if (searchState().status === 'error') {
+    <p role="alert">
+      {{ searchState().error }}
+    </p>
+  }
+
+  @if (!isSearching()) {
+    @if (visibleTree().length > 0) {
+      <app-permission-tree
+        [nodes]="visibleTree()"
+        (selectionChange)="onSelectionChange($event)"
+      />
+    } @else {
+      <p>
+        No permissions found.
+      </p>
+    }
+  }
+  <hr />
+  <section>
+    <h2>
+      Selected Permission IDs
+    </h2>
+    <code>
+      {{ selectedIdsText() }}
+    </code>
+  </section>
+</main>

@@ -1,1 +1,28 @@
-<p>permission-tree-node works!</p>
+<div class="permission-row">
+  <label class="permission-label">
+    <input
+      type="checkbox"
+      [checked]="node().selected"
+      [indeterminate]="node().indeterminate"
+      (change)="onCheckboxChange($event)"
+    />
+
+    <span>
+      {{ node().title }}
+    </span>
+  </label>
+</div>
+
+@if (node().children.length > 0) {
+  <ul class="permission-children">
+    @for (child of node().children;
+      track child.id) {
+      <li>
+        <app-permission-tree-node
+          [node]="child"
+          (selectionChange)="selectionChange.emit($event) "
+        />
+      </li>
+    }
+  </ul>
+}
