@@ -5,9 +5,7 @@ interface NodeUpdateResult {
   readonly changed: boolean;
 }
 
-export function normalizePermissionTree(
-  tree: readonly PermissionNodeDto[],
-): readonly PermissionNode[] {
+export function normalizePermissionTree(tree: readonly PermissionNodeDto[]): readonly PermissionNode[] {
   return tree.map((node) => normalizePermissionNode(node));
 }
 
@@ -42,7 +40,6 @@ function recalculateNodeState(node: PermissionNode): PermissionNode {
   }
 
   const allSelected = node.children.every((child) => child.selected && !child.indeterminate);
-
   const anySelected = node.children.some((child) => child.selected || child.indeterminate);
 
   return {
@@ -55,10 +52,8 @@ function recalculateNodeState(node: PermissionNode): PermissionNode {
 function setSubtreeSelection(node: PermissionNode, selected: boolean): PermissionNode {
   return {
     ...node,
-
     selected,
     indeterminate: false,
-
     children: node.children.map((child) => setSubtreeSelection(child, selected)),
   };
 }
@@ -95,7 +90,6 @@ function updateNode(
 
   for (let childIndex = 0; childIndex < node.children.length; childIndex++) {
     const child = node.children[childIndex];
-
     const childResult = updateNode(child, permissionId, selected);
 
     if (!childResult.changed) {
@@ -111,7 +105,6 @@ function updateNode(
         ...node,
         children: newChildren,
       }),
-
       changed: true,
     };
   }
@@ -124,7 +117,6 @@ function updateNode(
 
 export function getSelectedPermissionIds(tree: readonly PermissionNode[]): number[] {
   const result: number[] = [];
-
   const stack: PermissionNode[] = [...tree].reverse();
 
   while (stack.length > 0) {
@@ -157,7 +149,6 @@ export function findMatchingPermissionIds(
   }
 
   const result: number[] = [];
-
   const stack: PermissionNode[] = [...tree];
 
   while (stack.length > 0) {
@@ -177,19 +168,6 @@ export function findMatchingPermissionIds(
   return result;
 }
 
-export function filterPermissionTree(
-  tree: readonly PermissionNode[],
-  rawTerm: string,
-): readonly PermissionNode[] {
-  const term = normalizeSearchTerm(rawTerm);
-
-  if (!term) {
-    return tree;
-  }
-
-  return filterTreeByPredicate(tree, (node) => normalizeSearchTerm(node.title).includes(term));
-}
-
 export function filterPermissionTreeByIds(
   tree: readonly PermissionNode[],
   ids: ReadonlySet<number>,
@@ -205,7 +183,6 @@ function filterTreeByPredicate(
 
   for (const node of tree) {
     const filteredChildren = filterTreeByPredicate(node.children, predicate);
-
     const matchesSelf = predicate(node);
 
     if (!matchesSelf && filteredChildren.length === 0) {
