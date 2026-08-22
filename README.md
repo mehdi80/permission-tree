@@ -8,7 +8,7 @@ An Angular 22 implementation of a recursive, unlimited-depth permission tree wit
 - **RxJS** — search debouncing, cancellation, and async state derivation
 - **TypeScript** — strict, immutable (`readonly`) domain models
 
-No third-party tree/search library is used — all selection and search logic is hand-written, per the task constraints.
+No third-party tree/search library is used — all selection and search logic is hand-written.
 
 ## Project Structure
 
