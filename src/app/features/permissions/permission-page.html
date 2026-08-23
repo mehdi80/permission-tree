@@ -17,22 +17,22 @@
     />
   </div>
 
-  @if (isSearching()) {
+  @if (store.isSearching()) {
     <p>
       Searching...
     </p>
   }
 
-  @if (searchState().status === 'error') {
+  @if (store.searchStatus() === 'error') {
     <p role="alert">
-      {{ searchState().error }}
+      {{ store.error() }}
     </p>
   }
 
-  @if (!isSearching()) {
-    @if (visibleTree().length > 0) {
+  @if (!store.isSearching()) {
+    @if (store.visibleTree().length > 0) {
       <app-permission-tree
-        [nodes]="visibleTree()"
+        [nodes]="store.visibleTree()"
         (selectionChange)="onSelectionChange($event)"
       />
     } @else {
@@ -47,7 +47,7 @@
       Selected Permission IDs
     </h2>
     <code>
-      {{ selectedIdsText() }}
+      {{ store.selectedIdsText() }}
     </code>
   </section>
 </main>
