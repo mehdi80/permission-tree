@@ -1,10 +1,10 @@
 # Permission Tree Management
 
-An Angular 22 implementation of a recursive, unlimited-depth permission tree with cascading checkbox selection, indeterminate state, structure-preserving search, and a mocked RxJS-driven search pipeline.
+An Angular 21 implementation of a recursive, unlimited-depth permission tree with cascading checkbox selection, indeterminate state, structure-preserving search, and a mocked RxJS-driven search pipeline.
 
 ## Stack
 
-- **Angular 22** — standalone components, Signals (`input()` / `output()` / `computed`), no `NgModules`
+- **Angular 21** — standalone components, Signals (`input()` / `output()` / `computed`), no `NgModules`
 - **RxJS** — search debouncing, cancellation, and async state derivation
 - **TypeScript** — strict, immutable (`readonly`) domain models
 
@@ -25,14 +25,15 @@ features/permissions/
 │   └── mock-permission-search.gateway.ts   # Adapter (mock implementation)
 │   └── permission.mock.ts
 │
-├── state/            # Application state
+├── state/            # Application state and its domain state contract
+│   ├── permission-state.model.ts
 │   └── permissions.store.ts
 │
 ├── ui/               # Dumb/presentational components
 │   ├── permission-tree.*
 │   └── permission-tree-node.*
 │
-└── permissions-page.* # Smart component: wires state + gateway + UI together
+└── permission-page.* # Smart component: wires state + gateway + UI together
 ```
 
 **Why this split:**
@@ -55,41 +56,56 @@ All tree operations are **immutable** — every function returns new arrays/obje
 
 Naming follows a verb-first convention for anything that performs an action or computation (`normalize…`, `update…`, `get…`, `find…`, `filter…`, `recalculate…`), which keeps intent obvious at call sites without needing to read the implementation.
 
-## State (`permissions.store.ts`)
+## State (`permission-state.model.ts`, `permissions.store.ts`)
 
-A minimal, hand-rolled **Signal Store**:
+The feature uses **`@ngrx/signals`** for its Signal Store. `PermissionState` defines the store state shape, while `permissionsStore` composes that state with computed values and methods:
 
 ```ts
-private readonly _tree = signal(normalizePermissionTree(MOCK_PERMISSIONS));
-readonly tree = this._tree.asReadonly();
-readonly selectedIds = computed(() => getSelectedPermissionIds(this._tree()));
+export const permissionsStore = signalStore(
+  withState(InitialState),
+  withComputed(({ tree, searchTerm, searchStatus, matchedIds }) => ({
+    selectedIds: computed(() => getSelectedPermissionIds(tree())),
+    isSearching: computed(() => searchTerm().trim().length > 0 && searchStatus() === 'loading'),
+    visibleTree: computed(() => ...),
+    selectedIdsText: computed(() => ...)
+  })),
+  withMethods((store, gateway = inject(PERMISSION_SEARCH_GATEWAY)) => ({
+    updateSelection(change) { ... },
+    search: rxMethod<string>(...)
+  }))
+);
 ```
 
-- Single private writable signal as the source of truth; everything else (`tree`, `selectedIds`) is exposed read-only or derived.
-- `updateSelection()` is the only mutation entry point, and it always goes through the pure `updatePermissionSelection` domain function — the store never contains selection/indeterminate logic itself.
+- `withState(InitialState)` stores the normalized permission tree, search term, search status, matched ids, and possible error.
+- `withComputed` exposes `selectedIds`, `isSearching`, `visibleTree`, and `selectedIdsText` as derived Signals. Search results are projected from the original tree, so filtering does not mutate selection state.
+- `withMethods` exposes `updateSelection()` and the RxJS-backed `search()` method. Selection updates still delegate to the pure `updatePermissionSelection` domain function.
+- `permissionsStore` is provided by `PermissionsPage`, which gives each page instance its own store scope and injects the configured `PERMISSION_SEARCH_GATEWAY`.
 
-> **Planned migration:** this store is intentionally simple for now and will be migrated to **`@ngrx/signals` (`signalStore`)** once the pattern is settled across the app. The domain functions were kept pure and store-agnostic specifically so that move is a drop-in change — only `permissions.store.ts` will need rewriting to `withState` / `withComputed` / `withMethods`; nothing in `domain/`, `ui/`, or `data-access/` should need to change.
+The store is already implemented with `@ngrx/signals`; there is no future migration remaining for this feature. The separate state model keeps the state contract explicit while the domain functions remain framework-agnostic.
 
-## Search & RxJS (`permissions-page.ts`)
+## Search & RxJS (`permissions.store.ts`, `permission-page.ts`)
 
-The search input is a signal, converted to an observable only to run through the async pipeline, then converted back to a signal for the template:
+The page forwards each input value to the store's `search()` method. `rxMethod` owns the RxJS pipeline inside the Signal Store:
 
 ```
-searchTerm (signal)
-  → toObservable
-  → debounceTime(300)       // no request per keystroke
-  → distinctUntilChanged()  // no repeat request for the same term
-  → switchMap(term => gateway.search(term))
-      → startWith(loading state)
-      → catchError(error state)
-  → toSignal
+onSearchInput(event)
+  → store.search(input.value)
+  → rxMethod<string>
+      → trim
+      → debounceTime(300)
+      → distinctUntilChanged()
+      → update search state to loading
+      → switchMap(term => gateway.search(term))
+          → tapResponse(next/error)
+      → update success/error state
 ```
 
 - **`debounceTime(300)`** — waits for the user to pause typing before firing a request.
 - **`distinctUntilChanged()`** — after trimming, an unchanged term (e.g. retyping the same value, or a debounce firing on a value seen before) never triggers a duplicate call.
 - **`switchMap`** — the core cancellation mechanism: a new keystroke's request automatically unsubscribes any in-flight previous request, so only the latest search's response can ever update state; stale responses are discarded rather than racing.
-- **`startWith` / `catchError`** inside the inner pipe (not the outer one) ensure a failed or loading search doesn't kill the outer subscription — the search box keeps working after an error.
-- `isSearching` and `visibleTree` are `computed()` guards that check `searchState().term` against the *current* `searchTerm()`, so a slow response for an old term is never rendered even for the instant before the next debounce fires.
+- **`tapResponse`** handles successful and failed gateway responses and writes the result into the store without terminating the `rxMethod` pipeline, so the search box keeps working after an error.
+- **`switchMap`** ensures that a newer search cancels the previous request; only the latest response updates `matchedIds`.
+- `isSearching` and `visibleTree` are computed store properties driven by `searchTerm`, `searchStatus`, and `matchedIds`.
 
 The mock gateway (`MockPermissionSearchGateway`) simulates network latency with `delay(500)` so the loading/cancellation behavior is actually observable during manual testing.
 
