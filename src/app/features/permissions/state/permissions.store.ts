@@ -1,26 +1,19 @@
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
+import { debounceTime, distinctUntilChanged, map, of, pipe, switchMap, tap } from 'rxjs';
+import { PERMISSION_SEARCH_GATEWAY } from '../data-access/permission-search.gateway';
+import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { computed, inject } from '@angular/core';
+import { tapResponse } from '@ngrx/operators';
+
 import {
   filterPermissionTreeByIds,
   getSelectedPermissionIds,
   normalizePermissionTree,
   updatePermissionSelection,
 } from '../domain/permissions-tree.utils';
-
+import { PermissionState } from './permission-state.model';
 import { MOCK_PERMISSIONS } from '../data-access/permission.mock';
-import { PermissionNode, PermissionSelectionChange } from '../domain/permission.model';
-import { PERMISSION_SEARCH_GATEWAY } from '../data-access/permission-search.gateway';
-import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { debounceTime, distinctUntilChanged, map, of, pipe, switchMap, tap } from 'rxjs';
-import { tapResponse } from '@ngrx/operators';
-
-interface PermissionState {
-  tree: readonly PermissionNode[],
-  searchTerm: string,
-  searchStatus: 'idle' | 'loading' | 'success' | 'error',
-  matchedIds: ReadonlySet<number> | null,
-  error: string | null
-}
+import { PermissionSelectionChange } from '../domain/permission.model';
 
 const InitialState: PermissionState = {
   tree: normalizePermissionTree(MOCK_PERMISSIONS),

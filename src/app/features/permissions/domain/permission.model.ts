@@ -19,3 +19,8 @@ export interface PermissionSelectionChange {
   readonly id: number;
   readonly selected: boolean;
 }
+
+export interface NodeUpdateResult {
+  readonly node: PermissionNode;
+  readonly changed: boolean;
+}

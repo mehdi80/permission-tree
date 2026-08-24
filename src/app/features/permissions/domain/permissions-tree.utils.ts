@@ -1,9 +1,5 @@
-import { PermissionNode, PermissionNodeDto } from './permission.model';
+import { NodeUpdateResult, PermissionNode, PermissionNodeDto } from './permission.model';
 
-interface NodeUpdateResult {
-  readonly node: PermissionNode;
-  readonly changed: boolean;
-}
 
 export function normalizePermissionTree(tree: readonly PermissionNodeDto[]): readonly PermissionNode[] {
   return tree.map((node) => normalizePermissionNode(node));
